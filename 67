@@ -1,22 +1,24 @@
--- Lua (Roblox Luau) | Instant Aimbot & FOV Circle | Roblox Executor
--- Runs automatically upon execution without any GUI menu
+```lua
+-- Roblox Luau | FOV Circle Only
+-- ใช้สำหรับแสดงวงกลมกลางหน้าจอ
 
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
 
--- ================= CONFIGURATION =================
-local FOV_RADIUS = 150         -- ขนาดรัศมีวงกลม FOV
-local FOV_COLOR = Color3.fromRGB(255, 0, 0) -- สีของวงกลม (สีแดง)
-local SMOOTHNESS = 0.2          -- ความสมูทในการล็อค (0.1 = ล็อคไว, 1 = ล็อคช้าเนียนๆ)
-local AIM_PART = "Head"         -- ตำแหน่งที่ต้องการล็อค ("Head" หรือ "HumanoidRootPart")
--- =================================================
+local FOV_RADIUS = 150
+local FOV_COLOR = Color3.fromRGB(255, 0, 0)
 
--- Create FOV Circle
+-- ตรวจสอบ Drawing API
+if not Drawing or not Drawing.new then
+    warn("Drawing API is not available")
+    return
+end
+
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Point = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+FOVCircle.Position = Vector2.new(
+    Camera.ViewportSize.X / 2,
+    Camera.ViewportSize.Y / 2
+)
 FOVCircle.Radius = FOV_RADIUS
 FOVCircle.Thickness = 2
 FOVCircle.Color = FOV_COLOR
@@ -24,58 +26,21 @@ FOVCircle.Visible = true
 FOVCircle.Filled = false
 FOVCircle.Transparency = 1
 
--- Update FOV Circle position
-RunService.RenderStepped:Connect(function()
-    FOVCircle.Point = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+local connection
+connection = RunService.RenderStepped:Connect(function()
+    Camera = workspace.CurrentCamera
+
+    if not Camera then
+        return
+    end
+
+    FOVCircle.Position = Vector2.new(
+        Camera.ViewportSize.X / 2,
+        Camera.ViewportSize.Y / 2
+    )
 end)
 
--- Function to get closest player inside FOV
-local function GetClosestPlayer()
-    local ClosestTarget = nil
-    local ShortestDistance = FOVRADIUS
-
-    for , Player in pairs(Players:GetPlayers()) do
-        if Player ~= LocalPlayer and Player.Character and Player.Character:FindFirstChild(AIM_PART) and Player.Character:FindFirstChild("Humanoid") and Player.Character.Humanoid.Health > 0 then
-            local TargetPart = Player.Character[AIM_PART]
-            local ScreenPosition, OnScreen = Camera:WorldToViewportPoint(TargetPart.Position)
-
-            if OnScreen then
-                local MousePos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local TargetPos = Vector2.new(ScreenPosition.X, ScreenPosition.Y)
-                local Distance = (MousePos - TargetPos).Magnitude
-
-                if Distance < ShortestDistance then
-                    ShortestDistance = Distance
-                    ClosestTarget = TargetPart
-                end
-            end
-        end
-    end
-    return ClosestTarget
-end
-
--- Main Aimbot Loop (Holding Right Mouse Button to Aim)
-local Aiming = false
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        Aiming = true
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        Aiming = false
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if Aiming then
-        local Target = GetClosestPlayer()
-        if Target then
-            local CurrentCFrame = Camera.CFrame
-            local TargetCFrame = CFrame.new(CurrentCFrame.Position, Target.Position)
-            Camera.CFrame = CurrentCFrame:Lerp(TargetCFrame, SMOOTHNESS)
-        end
-    end
-end)
+-- หากต้องการหยุดและล้างวงกลม:
+-- connection:Disconnect()
+-- FOVCircle:Remove()
+```
